@@ -1,9 +1,9 @@
 import os
 import yaml
 import json
-
 from openai import OpenAI
-from typing import Optional
+from ollama import chat
+from typing import Optional, Union, Dict, Any
 from dotenv import load_dotenv
 from db import UserManager
 
@@ -11,6 +11,29 @@ load_dotenv()
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
+
+def get_ollama_completion(
+    prompt: str,
+    system_message: str = None,
+    model: str = "gemma3",
+    temperature: float = 0.7
+) -> str:
+    try:
+        messages = []
+        if system_message:
+            messages.append({"role": "system", "content": system_message})
+        messages.append({"role": "user", "content": prompt})
+        
+        response = chat(
+            model=model,
+            messages=messages,
+            options={"temperature": temperature}
+        )
+        
+        return response.message.content.strip()
+
+    except Exception as e:
+        raise Exception(f"Error calling Ollama API: {str(e)}")
 
 def get_openai_completion(
     prompt: str,
@@ -37,11 +60,30 @@ def get_openai_completion(
     except Exception as e:
         raise Exception(f"Error calling OpenAI API: {str(e)}")
 
+def get_completion(
+    prompt: str,
+    system_message: str = None,
+    provider: str = "openai",
+    model: str = None,
+    temperature: float = 0.7,
+    max_tokens: Optional[int] = None
+) -> str:
+    """Unified interface for getting completions from different LLM providers"""
+    if provider == "openai":
+        model = model or "gpt-4o-mini"
+        return get_openai_completion(prompt, system_message, model, temperature, max_tokens)
+    elif provider == "ollama":
+        model = model or "gemma3"
+        return get_ollama_completion(prompt, system_message, model, temperature)
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")
 
 class MessageInterpreter:
-    def __init__(self):
+    def __init__(self, provider="openai", model=None):
         # Read the yaml file
         self.user_manager = UserManager()
+        self.provider = provider
+        self.model = model
         with open('action_config.yaml', 'r') as file:
             self.action_config = yaml.safe_load(file)
         
@@ -54,7 +96,7 @@ class MessageInterpreter:
 Following is a configuration of action and based on the message, interpret which action should be taken and the output is the name of the action 
 {action_names}
 """
-        return get_openai_completion(message, system_message=context_prompt)
+        return get_completion(message, system_message=context_prompt, provider=self.provider, model=self.model)
     
     def get_action_parameters(self, action_name: str) -> dict:
         # Find the action in the list by matching the name
@@ -73,7 +115,7 @@ Don't use code blocks or any other formatting.
 """
 
         # Get the response from the LLM
-        response = get_openai_completion(message, system_message=context_prompt)
+        response = get_completion(message, system_message=context_prompt, provider=self.provider, model=self.model)
 
         return response
 

@@ -7,6 +7,10 @@ from llm import MessageInterpreter
 # Load environment variables from .env file
 load_dotenv()
 
+# Get LLM provider and model from environment variables
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")
+LLM_MODEL = os.getenv("LLM_MODEL")
+
 # Initialize app with bot token and socket mode handler
 app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
@@ -22,8 +26,8 @@ def message_handler(message, say):
 def handle_mention(event, say):
     """Handle when bot is mentioned"""
 
-    # Initialize message interpreter
-    message_interpreter = MessageInterpreter()
+    # Initialize message interpreter with configured provider and model
+    message_interpreter = MessageInterpreter(provider=LLM_PROVIDER, model=LLM_MODEL)
     
     # Get interpretation result
     try:
@@ -33,7 +37,7 @@ def handle_mention(event, say):
         parameters = result['parameters']
         
         # Format response message
-        response = f"Action: {result['action_name']}\nParameters: {parameters}"
+        response = f"Action: {result['action_name']}\nResponse: {parameters}"
         say(response)
         
     except Exception as e:
