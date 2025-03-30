@@ -1,0 +1,21 @@
+actions:
+  - name: CREATE
+    description: This action is called if the message is about creating or adding a row
+    parameters:
+      - first_name
+      - last_name
+      - email_id
+  - name: DELETE
+    description: This action is called if the message is about deleting or removing a row
+    parameters:
+      - email_id
+  - name: UPDATE
+    description: This action is called if the message is about updating a row
+    parameters:
+      - first_name
+      - last_name
+      - email_id
+  - name: READ
+    description: This action is called if the message is about reading a row
+    parameters:
+      - email_id
